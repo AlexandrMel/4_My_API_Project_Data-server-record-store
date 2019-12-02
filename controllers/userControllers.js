@@ -1,57 +1,90 @@
 const User = require("../models/User");
 const createError = require("http-errors");
-const { check, body, validationResult } = require('express-validator');
+const { validationResult } = require("express-validator");
 
 exports.getUsers = async (req, res, next) => {
-    try {
-  const users = await User.find();
+  try {
+    const users = await User.find()
+      .select("-password -__v")
+      .sort("lastName")
+      .limit(5);
     res.status(200).send(users);
-    }catch(e){
-next(e)
-    }
-}
+  } catch (e) {
+    next(e);
+  }
+};
 
+exports.getUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id).select("-password -__v");
+    if (!user) throw new createError.NotFound();
+    res.status(200).send(user);
+  } catch (e) {
+    next(e);
+  }
+};
+
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) throw new createError.NotFound();
+    res.status(200).send(user);
+  } catch (e) {
+    next(e);
+  }
+};
+
+exports.updateUser = async (req, res, next) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true
+    });
+    if (!user) throw new createError.NotFound();
+    res.status(200).send(user);
+  } catch (e) {
+    next(e);
+  }
+};
 
 exports.addUser = async (req, res, next) => {
-    try{
-        // Finds the validation errors in this request and wraps them in an object with handy functions
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(422).json({ errors: errors.array() });
-  }
-    const user = new User(req.body)
-    const token = 
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).json({ errors: errors.array() });
+    }
+
+    const user = new User(req.body);
+    const token = user.generateAuthToken();
     await user.save();
-    res.status(200).send(user);
-    }catch(e) {
-        next(e)
-    }
-}
-exports.deleteUser = async (req, res, next) => {
-    try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if(!user) throw new createError.NotFound();
-    res.status(200).send(user);
-    }catch(e){
-next(e)
-    }
-}
-exports.getUser = async (req, res,  next) => {
-    try {
-    const { id }  = req.params;
-    const user = await User.findById(id)
-    if(!user) throw new createError.NotFound();
-    res.status(200).send(user)
-    } catch(e){
-        next(e);
-    }
-}
-exports.putUser = async (req, res,  next) => {
-    try {
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, {new: true, runValidators: true});
-    if(!user) throw new createError.NotFound()
-    res.status(200).send(user)
-    } catch(e){
-        next(e)
-    }
-}
+    const data = user.getPublicFields();
+
+    res
+      .status(200)
+      .header("x-auth", token)
+      .send(data);
+  } catch (e) {
+    next(e);
+  }
+};
+
+exports.loginUser = async (req, res, next) => {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  try {
+    const user = await User.findOne({ email });
+    const valid = await user.checkPassword(password);
+    if (!valid) throw new createError.NotFound();
+
+    const token = user.generateAuthToken();
+    const data = user.getPublicFields();
+
+    res
+      .status(200)
+      .header("x-auth", token)
+      .send(data);
+  } catch (e) {
+    next(e);
+  }
+};
