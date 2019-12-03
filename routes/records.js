@@ -1,34 +1,25 @@
-
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { getRecords, addRecord, deleteRecord, getRecord, putRecord } = require('../controllers/recordsController');
+const auth = require("../middleware/authenticator");
+const isAdmin = require("../middleware/rolesAuthenticator");
 
+const {
+  getRecords,
+  getRecord,
+  updateRecord,
+  deleteRecord,
+  addRecord
+} = require("../controllers/recordsController");
 
-/**
- * GET all records
- */
+router
+  .route("/")
+  .get(getRecords)
+  .post(auth, isAdmin, addRecord);
 
- router
- .route('/')
- .get(getRecords)
- .post(addRecord)
-
-
- router
- .route('/:id')
- .get(getRecord)
- .delete(deleteRecord)
- .put(putRecord);
-//.get('/', getRecords);
-
-// /**
-// * POST a record
-//  */
-// router.post('/', addRecord);
-// /**
-// * DELETE a record
-//  */
-
-// router.delete('/:id', deleteRecord);
+router
+  .route("/:id")
+  .get(auth, isAdmin, getRecord)
+  .delete(auth, isAdmin, deleteRecord)
+  .put(auth, isAdmin, updateRecord);
 
 module.exports = router;

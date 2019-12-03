@@ -6,7 +6,7 @@ const Order = require('../models/Order');
 
 (async function() {
   /** CONNECT TO MONGO */
-  mongoose.connect("mongodb://localhost:27017/record_shop_DB", {
+  mongoose.connect('mongodb://localhost:27017/record_shop_DB', {
     useNewUrlParser: true,
     useCreateIndex: true,
     useUnifiedTopology: true
@@ -65,6 +65,7 @@ const Order = require('../models/Order');
         }
       });
 
+      const token = user.generateAuthToken();
       return user.save();
     });
 

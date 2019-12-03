@@ -11,7 +11,7 @@ const userValidationRules = () => {
     .withMessage('Do you call this an email?'),
     body('password')
     .isLength({min: 10})
-    .withMessage('Your passwod should be 10 characters long'),
+    .withMessage('Your password should be 10 characters long'),
     body('firstName').trim(),
     body('lastName').trim()
   ]

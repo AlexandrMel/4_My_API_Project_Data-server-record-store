@@ -1,35 +1,30 @@
-
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { getUsers, addUser, deleteUser, getUser, putUser } = require('../controllers/userControllers');
-const {userValidationRules,
-    userValidationErrorHandling} = require('../validators/validator')
+const { validateInputs } = require("../middleware/validator");
+const { userValidationRules } = require("../lib/validation/userRules");
+const auth = require("../middleware/authenticator");
+const isAdmin = require("../middleware/rolesAuthenticator");
+
+const {
+  getUsers,
+  getUser,
+  updateUser,
+  deleteUser,
+  addUser,
+  loginUser
+} = require("../controllers/usersController");
+
 router
-.route('/')
-.get(getUsers)
-.post(userValidationRules(),
-    userValidationErrorHandling, addUser);
+  .route("/")
+  .get(auth, isAdmin, getUsers)
+  .post(validateInputs(userValidationRules), addUser);
 
+router.route("/login").post(loginUser);
 
 router
-.route('/:id')
-.get(getUser)
-.delete(deleteUser)
-.put(userValidationRules(),
-    userValidationErrorHandling, putUser)
-
-/**
- * GET all records
- */
-// router.get('/', getUsers);
-
-// /**
-// * POST a record
-//  */
-// router.post('/', addUser);
-// /**
-// * DELETE a record
-//  */
-// router.delete('/', deleteUser);
+  .route("/:id")
+  .get(auth, getUser)
+  .delete(auth, deleteUser)
+  .put(auth, updateUser);
 
 module.exports = router;

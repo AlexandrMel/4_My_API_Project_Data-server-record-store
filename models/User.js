@@ -1,12 +1,11 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const Address = require("./Address");
-const jwt = require("jsonwebtoken");
-const superSecretKey = "superSecretKey";
-const encryption = require("../lib/validation/encryption");
+const Address = require('./Address');
+const jwt = require('jsonwebtoken');
 
 const UserSchema = new Schema(
   {
+    id: false,
     firstName: {
       type: String,
       required: true
@@ -17,18 +16,28 @@ const UserSchema = new Schema(
     },
     email: {
       type: String,
-      unique: true,
       required: true,
-      trim: true,
-      minlength: 1
+      unique: true
     },
-    role: {
+    password: {
       type: String,
-      enum: ["Admin", "User"],
+      required: true
+    },
+    birthday: {
+      type: Date
+    },
+    userName: {
+      type: String,
+      required: true,
+      unique: true
+    },
+    address: {
+      type: Address,
       required: true
     },
     tokens: [
       {
+        _id: false,
         access: {
           type: String,
           required: true
@@ -38,33 +47,28 @@ const UserSchema = new Schema(
           required: true
         }
       }
-    ],
-    password: {
-      type: String,
-      required: true
-    },
-    address: Address
+    ]
   },
   {
-    toObject: {
+    toJSON: {
       virtuals: true
     },
-    toJSON: {
+    toObject: {
       virtuals: true
     }
   }
 );
 
-UserSchema.virtual("fullName").get(function() {
-  return `${this.firstName} ${this.lastName}`;
+UserSchema.virtual('fullName').get(function() {
+  return this.firstName + ' ' + this.lastName;
 });
 
 UserSchema.methods.generateAuthToken = function() {
   const user = this;
-  const access = "auth";
+  const access = 'x-auth';
 
   const token = jwt
-    .sign({ _id: user._id.toHexString(), access }, superSecretKey)
+    .sign({ _id: user._id.toHexString(), access }, 'babylon')
     .toString();
 
   user.tokens.push({ access, token });
@@ -73,19 +77,15 @@ UserSchema.methods.generateAuthToken = function() {
 };
 
 UserSchema.methods.getPublicFields = function() {
-  var returnObject = {
-    firstName: this.firstName,
+  return {
+    _id: this._id,
     lastName: this.lastName,
+    firstName: this.firstName,
     email: this.email,
-    _id: this._id
+    fullName: this.fullName,
+    birthday: new Date(this.birthday),
+    address: this.address
   };
-
-  return returnObject;
-};
-
-UserSchema.methods.checkPassword = async function(password) {
-  const user = this;
-  return await encryption.compare(password, user.password);
 };
 
 UserSchema.statics.findByToken = function(token) {
@@ -93,23 +93,16 @@ UserSchema.statics.findByToken = function(token) {
   let decoded;
 
   try {
-    decoded = jwt.verify(token, superSecretKey);
-  } catch (e) {
+    decoded = jwt.verify(token, 'babylon');
+  } catch (err) {
     return;
   }
 
   return User.findOne({
     _id: decoded._id,
-    "tokens.token": token,
-    "tokens.access": "auth"
-  }).select("-password -__v");
+    'tokens.token': token,
+    'tokens.access': decoded.access
+  });
 };
 
-UserSchema.pre("save", async function(next) {
-  if (!this.isModified("password")) return next();
-
-  this.password = await encryption.encrypt(this.password);
-  next();
-});
-
-module.exports = mongoose.model("User", UserSchema);
+module.exports = mongoose.model('User', UserSchema);
