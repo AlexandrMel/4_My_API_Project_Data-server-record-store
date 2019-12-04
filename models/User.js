@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 const Address = require('./Address');
 const jwt = require('jsonwebtoken');
+const encryption = require("../lib/validation/encryption")
 
 const UserSchema = new Schema(
   {
@@ -104,5 +105,9 @@ UserSchema.statics.findByToken = function(token) {
     'tokens.access': decoded.access
   });
 };
-
+UserSchema.pre("save", async function(next){
+  if(!this.isModified("password")) return next()
+  this.password = await encryption.encrypt(this.password)
+  next()
+})
 module.exports = mongoose.model('User', UserSchema);

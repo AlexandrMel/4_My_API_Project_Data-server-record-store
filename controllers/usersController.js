@@ -5,9 +5,8 @@ const { validationResult } = require("express-validator");
 exports.getUsers = async (req, res, next) => {
   try {
     const users = await User.find()
-      .select("-password -__v")
+      .select("-password -__v -tokens._id")
       .sort("lastName")
-      .limit(5);
     res.status(200).send(users);
   } catch (e) {
     next(e);
@@ -28,7 +27,7 @@ exports.deleteUser = async (req, res, next) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) throw new createError.NotFound();
-    res.status(200).send(user);
+    res.status(200).send(user).select("-password");
   } catch (e) {
     next(e);
   }
@@ -41,7 +40,8 @@ exports.updateUser = async (req, res, next) => {
       runValidators: true
     });
     if (!user) throw new createError.NotFound();
-    res.status(200).send(user);
+    const data = user.getPublicFields()
+    res.status(200).send(data);
   } catch (e) {
     next(e);
   }

@@ -16,7 +16,7 @@ const {
 
 router
   .route("/")
-  .get(auth, isAdmin, getUsers)
+  .get(getUsers)
   .post(validateInputs(userValidationRules), addUser);
 
 router.route("/login").post(loginUser);
