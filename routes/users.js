@@ -1,28 +1,31 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const { validateInputs } = require("../middleware/validator");
-const { userValidationRules } = require("../lib/validation/userRules");
-const auth = require("../middleware/authenticator");
-const isAdmin = require("../middleware/rolesAuthenticator");
+const {
+  userValidationRules,
+  userValidationErrorHandling
+} = require('../validators/validator');
+const auth = require('../middleware/authenticator');
 
 const {
   getUsers,
-  getUser,
-  updateUser,
-  deleteUser,
   addUser,
+  getUser,
+  deleteUser,
+  updateUser,
+  authenticateUser,
   loginUser
-} = require("../controllers/usersController");
+} = require('../controllers/usersController');
 
 router
-  .route("/")
-  .get(getUsers)
-  .post(validateInputs(userValidationRules), addUser);
+  .route('/')
+  .get(auth, getUsers)
+  .post(userValidationRules(), userValidationErrorHandling, addUser);
 
-router.route("/login").post(loginUser);
+router.route('/me').get(auth, authenticateUser);
+router.route('/login').post(loginUser);
 
 router
-  .route("/:id")
+  .route('/:id')
   .get(auth, getUser)
   .delete(auth, deleteUser)
   .put(auth, updateUser);

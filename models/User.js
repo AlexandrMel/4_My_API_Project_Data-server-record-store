@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 const Address = require('./Address');
 const jwt = require('jsonwebtoken');
-const encryption = require("../lib/validation/encryption")
+const encryption = require('../lib/validation/encryption');
 
 const UserSchema = new Schema(
   {
@@ -35,20 +35,7 @@ const UserSchema = new Schema(
     address: {
       type: Address,
       required: true
-    },
-    tokens: [
-      {
-        _id: false,
-        access: {
-          type: String,
-          required: true
-        },
-        token: {
-          type: String,
-          required: true
-        }
-      }
-    ]
+    }
   },
   {
     toJSON: {
@@ -72,9 +59,12 @@ UserSchema.methods.generateAuthToken = function() {
     .sign({ _id: user._id.toHexString(), access }, 'babylon')
     .toString();
 
-  user.tokens.push({ access, token });
-
   return token;
+};
+
+UserSchema.methods.checkPassword = async function(password) {
+  const user = this;
+  return await encryption.compare(password, user.password);
 };
 
 UserSchema.methods.getPublicFields = function() {
@@ -100,14 +90,16 @@ UserSchema.statics.findByToken = function(token) {
   }
 
   return User.findOne({
-    _id: decoded._id,
-    'tokens.token': token,
-    'tokens.access': decoded.access
+    _id: decoded._id
   });
 };
-UserSchema.pre("save", async function(next){
-  if(!this.isModified("password")) return next()
-  this.password = await encryption.encrypt(this.password)
-  next()
-})
+
+UserSchema.pre('save', async function(next) {
+  // only hash the password if it has been modified (or is new)
+  if (!this.isModified('password')) return next();
+
+  this.password = await encryption.encrypt(this.password);
+  next();
+});
+
 module.exports = mongoose.model('User', UserSchema);
